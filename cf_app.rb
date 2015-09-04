@@ -226,15 +226,18 @@ def send_to_log()
   end
 end
 
+def run()
+  validate_input
+  validate_environment
+  target
+  login
+  choose_space_and_org
+  app_exists?
+  parse_app_stats
+  validate_results
+  format_output
+  send_to_log
+  puts @output
+end
 
-validate_input
-validate_environment
-target
-login
-choose_space_and_org
-app_exists?
-parse_app_stats
-validate_results
-format_output
-send_to_log
-puts @output
+run
