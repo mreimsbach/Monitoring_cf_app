@@ -32,15 +32,16 @@ SKIP_SSL_VERIFICATION=false
 BAD_STATES=["error"]
 FORMAT=:JSON
 COUNT_PARAMETER=4
+USAGE_STRING = "Usage: cf_app.rb <USER> <PASS> <ORG> <SPACE> <APP>"
 
 def how_to_use
-  puts "Usage: cf_app.rb <USER> <PASS> <ORG> <SPACE> <APP>"
+  puts USAGE_STRING
 end
 
 def validate_input
   (0..COUNT_PARAMETER).to_a.each do |index|
     if ARGV[index].nil? or ARGV[index].empty?
-      help
+      how_to_use
       return_false "Not enough information provided"
       exit 2
     end
