@@ -64,12 +64,12 @@ end
 def validate_environment
   unless COMMANDS.nil?
     COMMANDS.each do |prog|
-      return_false "Program #{prog} not installed or not in PATH" if check_if_program_exists?(prog)
+      return_false "Program #{prog} not installed or not in PATH" if program_exists?(prog)
     end
   end
 end
 
-def check_if_program_exists?(name)
+def program_exists?(name)
   run_command("which #{name}").eql?(1)
 end
 
