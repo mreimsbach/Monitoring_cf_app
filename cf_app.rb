@@ -26,7 +26,7 @@
 # Sollte threasholds beherschen
 # git repo für anlegen, nicht so faul wie der admin sein!
 # Mit paramsparser arbeiten --organization anynines --space nagios --app teste1
-COMPONENTS=["cf"]
+COMMANDS=["cf"]
 API="api.de.a9s.eu"
 SKIP_SSL_VERIFICATION=false
 BAD_STATES=["error"]
@@ -62,8 +62,8 @@ def configure
 end
 
 def validate_environment
-  unless COMPONENTS.nil?
-    COMPONENTS.each do |prog|
+  unless COMMANDS.nil?
+    COMMANDS.each do |prog|
       return_false "Program #{prog} not installed or not in PATH" if check_if_program_exists?(prog)
     end
   end
