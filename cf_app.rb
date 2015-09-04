@@ -31,13 +31,14 @@ API="api.de.a9s.eu"
 SKIP_SSL_VERIFICATION=false
 BAD_STATES=["error"]
 FORMAT=:JSON
+COUNT_PARAMETER=4
 
 def help
   puts "Usage: cf_app.rb <USER> <PASS> <ORG> <SPACE> <APP>"
 end
 
 def validate_input
-  (0..4).to_a.each do |index|
+  (0..COUNT_PARAMETER).to_a.each do |index|
     if ARGV[index].nil? or ARGV[index].empty?
       help
       return_false "Not enough information provided"
