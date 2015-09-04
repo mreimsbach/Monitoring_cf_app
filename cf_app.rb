@@ -33,7 +33,7 @@ BAD_STATES=["error"]
 FORMAT=:JSON
 COUNT_PARAMETER=4
 
-def help
+def how_to_use
   puts "Usage: cf_app.rb <USER> <PASS> <ORG> <SPACE> <APP>"
 end
 
