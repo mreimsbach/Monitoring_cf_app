@@ -107,8 +107,7 @@ def app_exists?
 end
 
 def retrieve_app_stats
-  ret = run_command_with_return "cf app #{@app}"
-  return ret
+  run_command_with_return "cf app #{@app}"
 end
 
 def parse_app_stats
