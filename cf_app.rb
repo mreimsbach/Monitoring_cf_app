@@ -43,7 +43,6 @@ def validate_input
     if ARGV[index].nil? or ARGV[index].empty?
       how_to_use
       return_false "Not enough information provided"
-      exit 2
     end
   end
   configure
