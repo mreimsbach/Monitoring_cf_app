@@ -130,14 +130,20 @@ end
 def parse_instance_with_index
   @instances_information = {}
   (0..(@instances_expected.to_i - 1)).each do |instance|
-    @app_state.each_line do |line|
-      if line.start_with?("##{instance}")
-        _t, state, _t, _t, _t, cpu, memory, _t, memory_max, disk, _t, disk_max = line.split
-      else
-        next
-      end
-      @instances_information.merge!({ instance => { :state => state, :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk, :disk_max => disk_max } })
-    end
+    parse_instance(instance)
+  end
+end
+
+def parse_instance(instance)
+  @app_state.each_line do |line|
+    parse_line(line, instance)
+  end
+end
+
+def parse_line(line, instance)
+  if line.start_with?("##{instance}")
+    _t, state, _t, _t, _t, cpu, memory, _t, memory_max, disk, _t, disk_max = line.split
+    @instances_information.merge!({ instance => { :state => state, :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk, :disk_max => disk_max } })
   end
 end
 
