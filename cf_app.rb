@@ -5,10 +5,10 @@
 # INPUT: ARGV[0] = user, ARGV[1] = pass, ARGV[2] = org, ARGV[3] = space, ARGV[4] = app
 # OUTPUT: CPU Usage, Mem Usage, Instance Count, Errors
 #########################
-
+require 'optparse'
 
 #TODO:
-# Aufräumen
+# + Aufräumen
 # Versschiedene Output zulassen
 ## Nagios output
 ### /=5165MB;42827;45206;0;47586 /data=607675MB;598043;631268;0;664493 /boot=26MB;401;423;0;446
@@ -24,8 +24,8 @@
 ## send_to_stdout
 ## Eventuell mit config datei
 # Sollte threasholds beherschen
-# git repo für anlegen, nicht so faul wie der admin sein!
-# Mit paramsparser arbeiten --organization anynines --space nagios --app teste1
+# + git repo für anlegen, nicht so faul wie der admin sein!
+# + Mit paramsparser arbeiten --organization anynines --space nagios --app teste1
 COMMANDS=["cf"]
 API="api.de.a9s.eu"
 SKIP_SSL_VERIFICATION=false
@@ -34,26 +34,49 @@ FORMAT=:JSON
 COUNT_PARAMETER=4
 USAGE_STRING = "Usage: cf_app.rb <USER> <PASS> <ORG> <SPACE> <APP>"
 
-def how_to_use
-  puts USAGE_STRING
-  return_false "Not enough information provided"
-end
-
-def validate_input
-  (0..COUNT_PARAMETER).to_a.each do |index|
-    if ARGV[index].nil? or ARGV[index].empty?
-      how_to_use
+def parse_input
+  @options = {:user => nil, :pass => nil, :org => nil, :space => nil, :app => nil}
+  parser = OptionParser.new do|opts|
+    opts.banner = USAGE_STRING
+    opts.on('-u', '--user user', 'Username') do |user|
+    	@options[:user] = user;
     end
+    opts.on('-p', '--pass pass', 'Password') do |pass|
+      @options[:pass] = pass;
+    end
+    opts.on('-o', '--org org', 'Organization') do |org|
+      @options[:org] = org;
+    end
+    opts.on('-s', '--space space', 'Space') do |space|
+      @options[:space] = space;
+    end
+    opts.on('-a', '--app app', 'Application name') do |app|
+      @options[:app] = app;
+    end
+    opts.on('-h', '--help', 'Displays Help') do
+    	puts opts
+      exit
+  	end
   end
+  parser.parse!
+  valid_params
   configure
 end
 
+def check_param(param)
+  if param.nil? or param.empty?
+    return_false "Not enough information provided"
+    puts USAGE_STRING
+    exit 2
+  end
+end
+def valid_params
+  @options.each do |key, value|
+    check_param(value)
+  end
+end
+
 def configure
-  @user                   = ARGV[0]
-  @pass                   = ARGV[1]
-  @org                    = ARGV[2]
-  @space                  = ARGV[3]
-  @app                    = ARGV[4]
   @app_state              = nil
   @instances_present      = nil
   @instances_expected     = nil
@@ -87,7 +110,7 @@ def target
 end
 
 def login
-  run_command "cf auth '#{@user}' '#{@pass}'"
+  run_command "cf auth '#{@options[:user]}' '#{@options[:pass]}'"
 end
 
 def run_command(com)
@@ -99,15 +122,15 @@ def run_command_with_return(com)
 end
 
 def choose_space_and_org
-  run_command "cf t -o #{@org} -s #{@space}"
+  run_command "cf t -o #{@options[:org]} -s #{@options[:space]}"
 end
 
 def app_exists?
-  run_command "cf app #{@app}"
+  run_command "cf app #{@options[:app]}"
 end
 
 def retrieve_app_stats
-  run_command_with_return "cf app #{@app}"
+  run_command_with_return "cf app #{@options[:app]}"
 end
 
 def parse_app_stats
@@ -162,7 +185,7 @@ def validate_instances_summary
 end
 
 def to_megabyte
-    @instances_information.each do |k,v| # why k?
+    @instances_information.each do |k, v|
     [ :cpu, :memory, :memory_max, :disk, :disk_max].each do |val|
       if v[val].include?("G")
         v[val] = v[val].to_f * 1024
@@ -233,7 +256,7 @@ def send_to_log()
 end
 
 def run()
-  validate_input
+  parse_input
   validate_environment
   target
   login
