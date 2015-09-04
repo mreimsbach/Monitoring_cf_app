@@ -36,13 +36,13 @@ USAGE_STRING = "Usage: cf_app.rb <USER> <PASS> <ORG> <SPACE> <APP>"
 
 def how_to_use
   puts USAGE_STRING
+  return_false "Not enough information provided"
 end
 
 def validate_input
   (0..COUNT_PARAMETER).to_a.each do |index|
     if ARGV[index].nil? or ARGV[index].empty?
       how_to_use
-      return_false "Not enough information provided"
     end
   end
   configure
