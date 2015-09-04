@@ -91,7 +91,7 @@ def login
 end
 
 def run_command(com)
-  ret = `#{com};echo $?`
+  `#{com};echo $?`
 end
 
 def run_command_with_return(com)
