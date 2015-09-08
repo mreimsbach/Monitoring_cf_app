@@ -6,6 +6,7 @@
 # OUTPUT: CPU Usage, Mem Usage, Instance Count, Errors
 #########################
 require 'optparse'
+require 'yaml'
 
 #TODO:
 # + Aufräumen
@@ -14,7 +15,7 @@ require 'optparse'
 ### /=5165MB;42827;45206;0;47586 /data=607675MB;598043;631268;0;664493 /boot=26MB;401;423;0;446
 ###https://nagios-plugins.org/doc/guidelines.html#AEN200
 ## Elk output ( elasticsearch, Logstash, Kibana )
-### Sollte als Json automatisch gehen, prüfen
+### Sollte als Json automatisch gehen, prüfen: erwartet JSON
 # Performance prüfen, verbessern ( vlt. durch cache file )
 ## CF_TRACE=true cf app blabla
 ### Sowas wie try if not present relogin, try again
@@ -26,11 +27,10 @@ require 'optparse'
 # Sollte threasholds beherschen
 # + git repo für anlegen, nicht so faul wie der admin sein!
 # + Mit paramsparser arbeiten --organization anynines --space nagios --app teste1
-COMMANDS=["cf"]
+
 API="api.de.a9s.eu"
-SKIP_SSL_VERIFICATION=false
 BAD_STATES=["error"]
-FORMAT=:JSON
+CONFIG_FILE_NAME="config.yml"
 COUNT_PARAMETER=4
 USAGE_STRING = "Usage: cf_app.rb <USER> <PASS> <ORG> <SPACE> <APP>"
 
@@ -63,6 +63,13 @@ def parse_input
   configure
 end
 
+def load_config
+  config = YAML::load_file(CONFIG_FILE_NAME)
+  @format = config["format"]
+  @skip_ssl_verification = config["skip_ssl_verification"]
+  @commands = config["commands"]
+end
+
 def check_param(param)
   if param.nil? or param.empty?
     return_false "Not enough information provided"
@@ -82,11 +89,12 @@ def configure
   @instances_expected     = nil
   @instances_information  = nil
   @output                 = ""
+  load_config
 end
 
 def validate_environment
-  unless COMMANDS.nil?
-    COMMANDS.each do |prog|
+  unless @commands.nil?
+    @commands.each do |prog|
       return_false "Program #{prog} not installed or not in PATH" if program_exists?(prog)
     end
   end
@@ -106,7 +114,7 @@ def return_true(msg)
 end
 
 def target
-  run_command "cf target #{API} #{--skip-ssl-validation if SKIP_SSL_VERIFICATION}"
+  run_command "cf target #{API} #{--skip-ssl-validation if @skip_ssl_verification}"
 end
 
 def login
@@ -166,7 +174,11 @@ end
 def parse_line(line, instance)
   if line.start_with?("##{instance}")
     _t, state, _t, _t, _t, cpu, memory, _t, memory_max, disk, _t, disk_max = line.split
-    @instances_information.merge!({ instance => { :state => state, :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk, :disk_max => disk_max } })
+  #  if FORMAT.eql?(:NAGIOS)
+  #    @instances_information.merge!("APP " + @output[:app] + " - STATE=" + state.to_s + ", CPU=" + cpu.to_s + ", MEMORY=" + memory.to_s + ", DISK=" + disk.to_s + ", DISK_MAX=" + disk_max.to_s)
+  #  else
+      @instances_information.merge!({ instance => { :state => state, :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk, :disk_max => disk_max } })
+  #  end
   end
 end
 
@@ -240,7 +252,7 @@ def state_check(index,info)
 end
 
 def format_output()
-  if FORMAT.eql?(:JSON)
+  if @format.eql?(:JSON)
     @output = @instances_information
   end
 end
