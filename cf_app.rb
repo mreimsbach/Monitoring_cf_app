@@ -24,7 +24,7 @@ require 'yaml'
 ## +  send_to_tcp umbennen
 ## + send_to_stdout
 ## + Eventuell mit config datei
-# Sollte threasholds beherschen
+#  + Sollte threasholds beherschen
 # + git repo für anlegen, nicht so faul wie der admin sein!
 # + Mit paramsparser arbeiten --organization anynines --space nagios --app teste1
 
@@ -69,6 +69,7 @@ def load_config
   @skip_ssl_verification = config["skip_ssl_verification"]
   @commands = config["commands"]
   @output_channels = config["output_channels"]
+  @thresholds = config["thresholds"]
 end
 
 def check_param(param)
@@ -179,11 +180,26 @@ end
 def parse_line(line, instance, app)
   if line.start_with?("##{instance}")
     _t, state, _t, _t, _t, cpu, memory, _t, memory_max, disk, _t, disk_max = line.split
+    check_thresholds(cpu, memory, disk, app)
   #  if FORMAT.eql?(:NAGIOS)
   #    @instances_information.merge!("APP " + @output[:app] + " - STATE=" + state.to_s + ", CPU=" + cpu.to_s + ", MEMORY=" + memory.to_s + ", DISK=" + disk.to_s + ", DISK_MAX=" + disk_max.to_s)
   #  else
       @instances_information.merge!({ instance => { :name => app, :state => state, :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk, :disk_max => disk_max } })
   #  end
+  end
+end
+
+def check_thresholds(cpu, memory, disk, app)
+  check_threshold_value(cpu, "cpu", app)
+  check_threshold_value(memory, "memory", app)
+  check_threshold_value(disk, "disk", app)
+end
+
+def check_threshold_value(value, name, app)
+  if value.to_i > (@thresholds[name]["max"]).to_i
+    send_to_output(app + ": " + name + " exceeds MAX and is at " + value)
+  elsif value.to_i < (@thresholds[name]["min"]).to_i
+    send_to_output(app + ": " + name + " is below MIN and is at " + value)
   end
 end
 
@@ -262,27 +278,27 @@ def format_output
   end
 end
 
-def send_to_tcp
+def send_to_tcp(msg)
   begin
     require 'socket'
     s = TCPSocket.open 'localhost', 5000
-    s.print(@instances_information)
+    s.print(msg)
     s.close
   rescue
   end
 end
 
-def send_to_stdout
-  puts @instances_information
+def send_to_stdout(msg)
+  puts msg
 end
 
-def send_to_output
+def send_to_output(msg)
   @output_channels.each do |output|
     case output
       when :TCP
-        send_to_tcp
+        send_to_tcp(msg)
       when :STDOUT
-        send_to_stdout
+        send_to_stdout(msg)
       else
         puts "Undefined Output Channel"
     end
@@ -295,7 +311,7 @@ def check_app(app)
   parse_app_stats(app)
   validate_results
   format_output
-  send_to_output
+  send_to_output(@instances_information)
 end
 
 def run
