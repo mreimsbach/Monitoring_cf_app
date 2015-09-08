@@ -20,9 +20,9 @@ require 'yaml'
 ## CF_TRACE=true cf app blabla
 ### Sowas wie try if not present relogin, try again
 # + Mehrere apps in dem gleichen space erlauben
-# send_to_log ist aktuell output channel sollte, mehre optionen zulassen
+# + send_to_log ist aktuell output channel sollte, mehre optionen zulassen
 ## +  send_to_tcp umbennen
-## send_to_stdout
+## + send_to_stdout
 ## + Eventuell mit config datei
 # Sollte threasholds beherschen
 # + git repo für anlegen, nicht so faul wie der admin sein!
@@ -31,7 +31,6 @@ require 'yaml'
 API="api.de.a9s.eu"
 BAD_STATES=["error"]
 CONFIG_FILE_NAME="config.yml"
-COUNT_PARAMETER=4
 USAGE_STRING = "Usage: cf_app.rb <USER> <PASS> <ORG> <SPACE> <APP>"
 
 def parse_input
