@@ -69,6 +69,7 @@ def load_config
   @format = config["format"]
   @skip_ssl_verification = config["skip_ssl_verification"]
   @commands = config["commands"]
+  @output_channels = config["output_channels"]
 end
 
 def check_param(param)
@@ -256,13 +257,13 @@ def state_check(index,info)
   end
 end
 
-def format_output()
+def format_output
   if @format.eql?(:JSON)
     @output = @instances_information
   end
 end
 
-def send_to_tcp()
+def send_to_tcp
   begin
     require 'socket'
     s = TCPSocket.open 'localhost', 5000
@@ -271,15 +272,34 @@ def send_to_tcp()
   rescue
   end
 end
+
+def send_to_stdout
+  puts @instances_information
+end
+
+def send_to_output
+  @output_channels.each do |output|
+    case output
+      when :TCP
+        send_to_tcp
+      when :STDOUT
+        send_to_stdout
+      else
+        puts "Undefined Output Channel"
+    end
+  end
+
+end
+
 def check_app(app)
   app_exists?(app)
   parse_app_stats(app)
   validate_results
   format_output
-  send_to_tcp
+  send_to_output
 end
 
-def run()
+def run
   parse_input
   validate_environment
   target

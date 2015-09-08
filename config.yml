@@ -2,3 +2,5 @@ format: :JSON
 skip_ssl_verification: false
 commands:
   - cf
+output_channels:
+  - :STDOUT
