@@ -21,7 +21,7 @@ require 'yaml'
 ### Sowas wie try if not present relogin, try again
 # + Mehrere apps in dem gleichen space erlauben
 # send_to_log ist aktuell output channel sollte, mehre optionen zulassen
-## send_to_tcp umbennen
+## +  send_to_tcp umbennen
 ## send_to_stdout
 ## + Eventuell mit config datei
 # Sollte threasholds beherschen
@@ -262,7 +262,7 @@ def format_output()
   end
 end
 
-def send_to_log()
+def send_to_tcp()
   begin
     require 'socket'
     s = TCPSocket.open 'localhost', 5000
@@ -276,7 +276,7 @@ def check_app(app)
   parse_app_stats(app)
   validate_results
   format_output
-  send_to_log
+  send_to_tcp
 end
 
 def run()
