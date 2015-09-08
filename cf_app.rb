@@ -19,11 +19,11 @@ require 'yaml'
 # Performance prüfen, verbessern ( vlt. durch cache file )
 ## CF_TRACE=true cf app blabla
 ### Sowas wie try if not present relogin, try again
-# Mehrere apps in dem gleichen space erlauben
+# + Mehrere apps in dem gleichen space erlauben
 # send_to_log ist aktuell output channel sollte, mehre optionen zulassen
 ## send_to_tcp umbennen
 ## send_to_stdout
-## Eventuell mit config datei
+## + Eventuell mit config datei
 # Sollte threasholds beherschen
 # + git repo für anlegen, nicht so faul wie der admin sein!
 # + Mit paramsparser arbeiten --organization anynines --space nagios --app teste1
@@ -39,19 +39,20 @@ def parse_input
   parser = OptionParser.new do|opts|
     opts.banner = USAGE_STRING
     opts.on('-u', '--user user', 'Username') do |user|
-    	@options[:user] = user;
+    	@options[:user] = user
     end
     opts.on('-p', '--pass pass', 'Password') do |pass|
-      @options[:pass] = pass;
+      @options[:pass] = pass
     end
     opts.on('-o', '--org org', 'Organization') do |org|
-      @options[:org] = org;
+      @options[:org] = org
     end
     opts.on('-s', '--space space', 'Space') do |space|
-      @options[:space] = space;
+      @options[:space] = space
     end
-    opts.on('-a', '--app app', 'Application name') do |app|
-      @options[:app] = app;
+    opts.on('-a', '--app app1,app2,app3',Array, 'Application name list with , separated and without spaces') do |app|
+      @options[:app]  = []
+      @options[:app] = app
     end
     opts.on('-h', '--help', 'Displays Help') do
     	puts opts
@@ -84,12 +85,16 @@ def valid_params
 end
 
 def configure
+  init_attributes
+  load_config
+end
+
+def init_attributes
   @app_state              = nil
   @instances_present      = nil
   @instances_expected     = nil
   @instances_information  = nil
   @output                 = ""
-  load_config
 end
 
 def validate_environment
@@ -133,18 +138,18 @@ def choose_space_and_org
   run_command "cf t -o #{@options[:org]} -s #{@options[:space]}"
 end
 
-def app_exists?
-  run_command "cf app #{@options[:app]}"
+def app_exists?(app)
+  run_command "cf app " + app
 end
 
-def retrieve_app_stats
-  run_command_with_return "cf app #{@options[:app]}"
+def retrieve_app_stats(app)
+  run_command_with_return "cf app " + app
 end
 
-def parse_app_stats
-  @app_state = retrieve_app_stats
+def parse_app_stats(app)
+  @app_state = retrieve_app_stats(app)
   parse_instances_summary
-  parse_instance_with_index
+  parse_instance_with_index(app)
 end
 
 def parse_instances_summary
@@ -158,26 +163,26 @@ end
 # #0   running   2015-08-19 12:15:45 PM   0.0%   77.8M of 256M   135.7M of 1G
 # Parse out running, 0.0%, 77.8M, 256M, 135.7M, 1G
 # _t is used for not required values
-def parse_instance_with_index
+def parse_instance_with_index(app)
   @instances_information = {}
   (0..(@instances_expected.to_i - 1)).each do |instance|
-    parse_instance(instance)
+    parse_instance(instance, app)
   end
 end
 
-def parse_instance(instance)
+def parse_instance(instance, app)
   @app_state.each_line do |line|
-    parse_line(line, instance)
+    parse_line(line, instance, app)
   end
 end
 
-def parse_line(line, instance)
+def parse_line(line, instance, app)
   if line.start_with?("##{instance}")
     _t, state, _t, _t, _t, cpu, memory, _t, memory_max, disk, _t, disk_max = line.split
   #  if FORMAT.eql?(:NAGIOS)
   #    @instances_information.merge!("APP " + @output[:app] + " - STATE=" + state.to_s + ", CPU=" + cpu.to_s + ", MEMORY=" + memory.to_s + ", DISK=" + disk.to_s + ", DISK_MAX=" + disk_max.to_s)
   #  else
-      @instances_information.merge!({ instance => { :state => state, :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk, :disk_max => disk_max } })
+      @instances_information.merge!({ instance => { :name => app, :state => state, :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk, :disk_max => disk_max } })
   #  end
   end
 end
@@ -266,6 +271,13 @@ def send_to_log()
   rescue
   end
 end
+def check_app(app)
+  app_exists?(app)
+  parse_app_stats(app)
+  validate_results
+  format_output
+  send_to_log
+end
 
 def run()
   parse_input
@@ -273,12 +285,11 @@ def run()
   target
   login
   choose_space_and_org
-  app_exists?
-  parse_app_stats
-  validate_results
-  format_output
-  send_to_log
-  puts @output
+  @options[:app].each do |app|
+    check_app(app)
+    puts @output
+    init_attributes
+  end
 end
 
 run
