@@ -1,0 +1,4 @@
+format: :JSON
+skip_ssl_verification: false
+commands:
+  - cf
