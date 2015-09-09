@@ -14,8 +14,8 @@ require 'yaml'
 ## Nagios output
 ### /=5165MB;42827;45206;0;47586 /data=607675MB;598043;631268;0;664493 /boot=26MB;401;423;0;446
 ###https://nagios-plugins.org/doc/guidelines.html#AEN200
-## Elk output ( elasticsearch, Logstash, Kibana )
-### Sollte als Json automatisch gehen, prüfen: erwartet JSON
+## + Elk output ( elasticsearch, Logstash, Kibana )
+### + Sollte als Json automatisch gehen, prüfen: erwartet JSON
 # Performance prüfen, verbessern ( vlt. durch cache file )
 ## CF_TRACE=true cf app blabla
 ### Sowas wie try if not present relogin, try again
@@ -180,28 +180,10 @@ end
 def parse_line(line, instance, app)
   if line.start_with?("##{instance}")
     _t, state, _t, _t, _t, cpu, memory, _t, memory_max, disk, _t, disk_max = line.split
-    check_thresholds(cpu, memory, disk, app)
-  #  if FORMAT.eql?(:NAGIOS)
-  #    @instances_information.merge!("APP " + @output[:app] + " - STATE=" + state.to_s + ", CPU=" + cpu.to_s + ", MEMORY=" + memory.to_s + ", DISK=" + disk.to_s + ", DISK_MAX=" + disk_max.to_s)
-  #  else
-      @instances_information.merge!({ instance => { :name => app, :state => state, :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk, :disk_max => disk_max } })
-  #  end
+    @instances_information.merge!({ instance => { :name => app, :state => state, :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk, :disk_max => disk_max } })
   end
 end
 
-def check_thresholds(cpu, memory, disk, app)
-  check_threshold_value(cpu, "cpu", app)
-  check_threshold_value(memory, "memory", app)
-  check_threshold_value(disk, "disk", app)
-end
-
-def check_threshold_value(value, name, app)
-  if value.to_i > (@thresholds[name]["max"]).to_i
-    send_to_output(app + ": " + name + " exceeds MAX and is at " + value)
-  elsif value.to_i < (@thresholds[name]["min"]).to_i
-    send_to_output(app + ": " + name + " is below MIN and is at " + value)
-  end
-end
 
 def validate_results
   to_megabyte
@@ -232,28 +214,32 @@ end
 def validate_instances
   @instances_information.each do |index, info|
     state_check(index,info)
-    cpu_allocation(index,info)
-    memory_allocation(index,info)
-    disk_allocation(index,info)
+    cpu_allocation(index,info,(@thresholds["cpu"]["min"]).to_i, (@thresholds["cpu"]["max"]).to_i)
+    memory_allocation(index,info, (@thresholds["memory"]["min"]).to_i, (@thresholds["memory"]["max"]).to_i)
+    disk_allocation(index,info, (@thresholds["disk"]["min"]).to_i, (@thresholds["disk"]["max"]).to_i )
   end
 end
 
-def memory_allocation(index,info)
-  calc(info[:memory], info[:memory_max], "MEM")
+def memory_allocation(index,info, min, max)
+  calc(info[:memory], info[:memory_max], "MEM", min, max)
 end
 
-def cpu_allocation(index,info)
-  if info[:cpu].to_f > 80
-    return_false "Process is using more than 80% CPU"
+def cpu_allocation(index,info, min, max)
+  if info[:cpu].to_f > max
+    return_false "Process is using more than " + max.to_s + "% CPU"
+  elsif info[:cpu].to_f < min
+    return_true "Process is using less than " + min.to_s + "% CPU;"
   else
     return_true "Index:#{index};CPU:#{info[:cpu]};"
   end
 end
 
-def calc(current, max, type)
+def calc(current, max, type, min_threshold, max_threshold)
   begin
-    if (current / max * 100).round(2) > 80
-      return_false "Process is using more than 80% #{type}"
+    if (current / max * 100).round(2) > max_threshold
+      return_false "Process is using more than " + max_threshold.to_s + "% #{type}"
+    elsif (current / max * 100).round(2) < min_threshold
+      return_true "Process is using less than " + min_threshold.to_s + "% #{type}"
     else
       return_true "#{type}:#{(current / max * 100).round(2)}%;"
     end
@@ -262,8 +248,8 @@ def calc(current, max, type)
   end
 end
 
-def disk_allocation(index,info)
-  calc(info[:disk], info[:disk_max], "DISK")
+def disk_allocation(index,info, min, max)
+  calc(info[:disk], info[:disk_max], "DISK", min, max)
 end
 
 def state_check(index,info)
@@ -273,8 +259,18 @@ def state_check(index,info)
 end
 
 def format_output
-  if @format.eql?(:JSON)
+  case @format
+  when :JSON
     @output = @instances_information
+  when :NAGIOS
+    format_to_nagios
+  end
+end
+
+def format_to_nagios
+  @output= ""
+  @instances_information.each do |k, v|
+    @output+= "APP " + v[:name] + " - STATE=" + v[:state] + ", CPU=" + v[:cpu].to_s + "%, MEMORY=" + v[:memory].to_s + "M, DISK=" + v[:disk].to_s + "M, DISK_MAX=" + v[:disk_max].to_s + "M"
   end
 end
 
@@ -311,7 +307,7 @@ def check_app(app)
   parse_app_stats(app)
   validate_results
   format_output
-  send_to_output(@instances_information)
+  send_to_output(@output)
 end
 
 def run
@@ -322,7 +318,7 @@ def run
   choose_space_and_org
   @options[:app].each do |app|
     check_app(app)
-    puts @output
+  #  puts @output
     init_attributes
   end
 end
