@@ -80,8 +80,8 @@ def check_param(param)
   end
 end
 def valid_params
-  @options.each do |key, value|
-    check_param(value)
+  @options.each do |k, v|
+    check_param(v)
   end
 end
 
@@ -270,7 +270,7 @@ end
 def format_to_nagios
   @output= ""
   @instances_information.each do |k, v|
-    @output+= "APP " + v[:name] + " - STATE=" + v[:state] + ", CPU=" + v[:cpu].to_s + "%, MEMORY=" + v[:memory].to_s + "M, DISK=" + v[:disk].to_s + "M, DISK_MAX=" + v[:disk_max].to_s + "M"
+    @output+= "APP " + v[:name] + " - STATE=" + v[:state] + ", CPU=" + v[:cpu].to_s + "%, MEMORY=" + v[:memory].to_s + "MB, DISK=" + v[:disk].to_s + "MB, DISK_MAX=" + v[:disk_max].to_s + "MB"
   end
 end
 
