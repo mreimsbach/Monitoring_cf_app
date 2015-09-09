@@ -227,9 +227,9 @@ def cpu_allocation(index,info, min, max)
   if info[:cpu].to_f > max
     return_false "Process is using more than " + max.to_s + "% CPU"
   elsif info[:cpu].to_f < min
-    return_true "Process is using less than " + min.to_s + "% CPU;"
+    send_to_output("Process is using less than " + min.to_s + "% CPU")
   else
-    return_true "Index:#{index};CPU:#{info[:cpu]};"
+    send_to_output("Index:#{index};CPU:#{info[:cpu]};")
   end
 end
 
@@ -238,9 +238,9 @@ def calc(current, max, type, min_threshold, max_threshold)
     if (current / max * 100).round(2) > max_threshold
       return_false "Process is using more than " + max_threshold.to_s + "% #{type}"
     elsif (current / max * 100).round(2) < min_threshold
-      return_true "Process is using less than " + min_threshold.to_s + "% #{type}"
+      send_to_output("Process is using less than " + min_threshold.to_s + "% #{type}")
     else
-      return_true "#{type}:#{(current / max * 100).round(2)}%;"
+      send_to_output("#{type}:#{(current / max * 100).round(2)}%;")
     end
   rescue
     return_false "Calculation not possible #{current} #{type} not valid"
