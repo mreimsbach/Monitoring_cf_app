@@ -7,6 +7,7 @@
 #########################
 require 'optparse'
 require 'yaml'
+require "yaml/store"
 
 #TODO:
 # + Aufräumen
@@ -86,6 +87,7 @@ def valid_params
 end
 
 def configure
+  @cache = YAML::Store.new("cache.yml")
   init_attributes
   load_config
 end
@@ -299,6 +301,18 @@ def send_to_output(msg)
     end
   end
 
+end
+
+def store_guid(k, v)
+  @cache.transaction {
+    @cache[:guids] = {k => v}
+  }
+end
+
+def get_guid(app_name)
+  @cache.transaction {
+    puts @cache[:guids][app_name]
+  }
 end
 
 def check_app(app)
