@@ -1,4 +1,4 @@
-format: :NAGIOS
+format: :JSON
 skip_ssl_verification: false
 commands:
   - cf
@@ -10,7 +10,7 @@ thresholds:
     max: 1
   memory:
     min: 200
-    max: 2
+    max: 500
   disk:
     min: 100
-    max: 3
+    max: 500
