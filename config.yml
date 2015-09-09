@@ -1,4 +1,4 @@
-format: :JSON
+format: :NAGIOS
 skip_ssl_verification: false
 commands:
   - cf
