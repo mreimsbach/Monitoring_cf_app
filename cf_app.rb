@@ -140,7 +140,7 @@ def choose_space_and_org
 end
 
 def app_exists?(app)
-  run_command "cf app " + app
+  @app_state = run_command "cf app " + app
 end
 
 def retrieve_app_stats(app)
@@ -148,7 +148,6 @@ def retrieve_app_stats(app)
 end
 
 def parse_app_stats(app)
-  @app_state = retrieve_app_stats(app)
   parse_instances_summary
   parse_instance_with_index(app)
 end
@@ -260,9 +259,9 @@ end
 
 def format_output
   case @format
-  when :JSON
+  when /\AJSON\Z/
     @output = @instances_information
-  when :NAGIOS
+  when /\ANAGIOS\Z/
     format_to_nagios
   end
 end
@@ -291,11 +290,11 @@ end
 def send_to_output(msg)
   @output_channels.each do |output|
     case output
-      when :TCP
+    when /\ATCP\Z/
         send_to_tcp(msg)
-      when :STDOUT
+    when /\ASTDOUT\Z/
         send_to_stdout(msg)
-      else
+    else
         puts "Undefined Output Channel"
     end
   end
@@ -303,7 +302,11 @@ def send_to_output(msg)
 end
 
 def check_app(app)
-  app_exists?(app)
+
+  if app_exists?(app).match(/1\Z/)
+    puts "App does not exist"
+    exit 2
+  end
   parse_app_stats(app)
   validate_results
   format_output
@@ -318,7 +321,6 @@ def run
   choose_space_and_org
   @options[:app].each do |app|
     check_app(app)
-  #  puts @output
     init_attributes
   end
 end
