@@ -25,7 +25,10 @@ output_channels:
 ###Activate SSL-Verification
 `skip_ssl_verification: true`
 ###Define thresholds
-Define the values in percent:
+Define the values:
+- CPU in percent
+- Memory in MB
+- Disk in MB
 ```
 thresholds:
   cpu:
