@@ -32,12 +32,12 @@ Define the values:
 ```
 thresholds:
   cpu:
-    min: 10
-    max: 1
+    warning: 50
+    critical: 80
   memory:
-    min: 200
-    max: 2
+    warning: 300
+    critical: 500
   disk:
-    min: 100
-    max: 3
+    warning: 500
+    critical: 1000
 ```
