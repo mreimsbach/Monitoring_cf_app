@@ -8,6 +8,7 @@
 require 'optparse'
 require 'yaml'
 require "yaml/store"
+require 'json'
 
 #TODO:
 # + Aufräumen
@@ -94,8 +95,6 @@ end
 
 def init_attributes
   @app_state              = nil
-  @instances_present      = nil
-  @instances_expected     = nil
   @instances_information  = nil
   @output                 = ""
 end
@@ -122,11 +121,15 @@ def return_true(msg)
 end
 
 def target
-  run_command "cf target #{API} #{--skip-ssl-validation if @skip_ssl_verification}"
+  run_command_with_return "cf target #{API} #{--skip-ssl-validation if @skip_ssl_verification}"
 end
 
 def login
   run_command "cf auth '#{@options[:user]}' '#{@options[:pass]}'"
+end
+
+def get_stats(guid)
+  run_command "cf curl /v2/apps/#{guid}/stats"
 end
 
 def run_command(com)
@@ -136,6 +139,7 @@ end
 def run_command_with_return(com)
   `#{com}`
 end
+
 
 def choose_space_and_org
   run_command "cf t -o #{@options[:org]} -s #{@options[:space]}"
@@ -154,103 +158,46 @@ def parse_app_stats(app)
   parse_instance_with_index(app)
 end
 
-def parse_instances_summary
-  begin
-    @instances_present, @instances_expected = @app_state.match(/instances: ([0-9]*)\/([0-9]*)\n/).captures
-  rescue
-    return_false "App state not parseable"
-  end
-end
-
-# #0   running   2015-08-19 12:15:45 PM   0.0%   77.8M of 256M   135.7M of 1G
-# Parse out running, 0.0%, 77.8M, 256M, 135.7M, 1G
-# _t is used for not required values
-def parse_instance_with_index(app)
-  @instances_information = {}
-  (0..(@instances_expected.to_i - 1)).each do |instance|
-    parse_instance(instance, app)
-  end
-end
-
-def parse_instance(instance, app)
-  @app_state.each_line do |line|
-    parse_line(line, instance, app)
-  end
-end
-
-def parse_line(line, instance, app)
-  if line.start_with?("##{instance}")
-    _t, state, _t, _t, _t, cpu, memory, _t, memory_max, disk, _t, disk_max = line.split
-    @instances_information.merge!({ instance => { :name => app, :state => state, :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk, :disk_max => disk_max } })
-  end
-end
-
-
-def validate_results
-  to_megabyte
-  validate_instances_summary
-  validate_instances
-end
-
-def validate_instances_summary
-  if @instances_present ==  @instances_expected
-    return_true "#{@instances_present}/#{@instances_expected} instances;"
-  else
-    return_false "Instance Count not matching #{@instances_present}/#{@instances_expected}"
-  end
-end
-
-def to_megabyte
-    @instances_information.each do |k, v|
-    [ :cpu, :memory, :memory_max, :disk, :disk_max].each do |val|
-      if v[val].include?("G")
-        v[val] = v[val].to_f * 1024
-      else
-        v[val] = v[val].to_f
-      end
-    end
-  end
+def get_apps
+  run_command_with_return "cf curl /v2/apps"
 end
 
 def validate_instances
   @instances_information.each do |index, info|
     state_check(index,info)
-    cpu_allocation(index,info,(@thresholds["cpu"]["min"]).to_i, (@thresholds["cpu"]["max"]).to_i)
-    memory_allocation(index,info, (@thresholds["memory"]["min"]).to_i, (@thresholds["memory"]["max"]).to_i)
-    disk_allocation(index,info, (@thresholds["disk"]["min"]).to_i, (@thresholds["disk"]["max"]).to_i )
+    cpu_allocation(index,info,(@thresholds["cpu"]["warning"]).to_i,
+                  (@thresholds["cpu"]["critical"]).to_i)
+    memory_allocation(index,info, (@thresholds["memory"]["warning"]).to_i,
+                  (@thresholds["memory"]["critical"]).to_i)
+    disk_allocation(index,info, (@thresholds["disk"]["warning"]).to_i,
+                  (@thresholds["disk"]["critical"]).to_i )
   end
 end
 
-def memory_allocation(index,info, min, max)
-  calc(info[:memory], info[:memory_max], "MEM", min, max)
+def memory_allocation(index,info, warning, critical)
+  calc(info[:memory], info[:memory_max],"MB", "MEM", warning, critical)
 end
 
-def cpu_allocation(index,info, min, max)
-  if info[:cpu].to_f > max
-    return_false "Process is using more than " + max.to_s + "% CPU;"
-  elsif info[:cpu].to_f < min
-    return_true "Process is using less than " + min.to_s + "% CPU;"
-  else
-    return_true "Index:#{index};CPU:#{info[:cpu]};"
-  end
+def cpu_allocation(index,info, warning, critical)
+  calc(info[:cpu], 100, "%", "CPU", warning, critical)
 end
 
-def calc(current, max, type, min_threshold, max_threshold)
+def calc(current, max, unit, type, warning, critical)
   begin
-    if (current / max * 100).round(2) > max_threshold
-      return_false "Process is using more than " + max_threshold.to_s + "% #{type};"
-    elsif (current / max * 100).round(2) < min_threshold
-      return_true "Process is using less than " + min_threshold.to_s + "% #{type};"
+    if current > critical
+      return_false "[CRITICAL] Process is using more than #{critical}#{unit} #{type};"
+    elsif current > warning
+      return_true "[WARNING] Process is using more than #{warning}#{unit} #{type};"
     else
-      return_true "#{type}:#{(current / max * 100).round(2)}%;"
+      return_true "[INFO] #{type}:#{current}#{unit};"
     end
   rescue
     return_false "Calculation not possible #{current} #{type} not valid"
   end
 end
 
-def disk_allocation(index,info, min, max)
-  calc(info[:disk], info[:disk_max], "DISK", min, max)
+def disk_allocation(index,info, warning, critical)
+  calc(info[:disk], info[:disk_max],"MB", "DISK", warning, critical)
 end
 
 def state_check(index,info)
@@ -271,7 +218,13 @@ end
 def format_to_nagios
   @output= ""
   @instances_information.each do |k, v|
-    @output+= "APP " + v[:name] + " - STATE=" + v[:state] + ", CPU=" + v[:cpu].to_s + "%, MEMORY=" + v[:memory].to_s + "MB, DISK=" + v[:disk].to_s + "MB, DISK_MAX=" + v[:disk_max].to_s + "MB"
+    @output+= "APP #{v[:name]} CPU Usage #{v[:cpu]}% "+
+    "MEM USAGE #{v[:memory]}MB DISK USAGE #{v[:disk]}MB|"+
+    "CPU=#{v[:cpu]}%;#{@thresholds['cpu']['warning']};"+
+    "#{@thresholds['cpu']['critical']} MEM=#{v[:memory]}MB;"+
+    "#{@thresholds['memory']['warning']};#{@thresholds['memory']['critical']}"+
+    ";;#{v[:memory_max]} DISK=#{v[:disk]}MB;#{@thresholds['disk']['warning']};"+
+    "#{@thresholds['disk']['critical']};;#{v[:disk_max]}"
   end
 end
 
@@ -305,35 +258,97 @@ end
 
 def store_guid(k, v)
   @cache.transaction {
-    @cache[:guids] = {k => v}
+    @cache[:guids] ||= {}
+    @cache[:guids].merge!({k => v})
   }
 end
 
 def get_guid(app_name)
   @cache.transaction {
-    puts @cache[:guids][app_name]
+    guids = @cache[:guids]
+    guids[app_name] unless guids.nil?
   }
 end
 
-def check_app(app)
-
-  if app_exists?(app).match(/1\Z/)
-    puts "App does not exist"
-    exit 2
+def check_app(app_name)
+  guid = get_guid(app_name)
+  if guid.nil? or guid.empty?
+    update_guid(app_name)
   end
-  parse_app_stats(app)
-  validate_results
+  init_app_state(guid, app_name)
+  parse_instance_result(app_name)
+  validate_instances
   send_to_output(@output)
   format_output
   send_to_output(@output)
+end
+
+def init_app_state(guid, app_name)
+  @app_state = get_stats(guid)
+  if @app_state["error_code"]
+    guid = update_guid(app_name)
+    @app_state = get_stats(guid)
+  end
+  @app_state = JSON.parse(@app_state.strip.slice!(0..-2))
+end
+
+def update_guid(app)
+  guid = fetch_guid(app)
+  if guid.eql?(-1)
+    init_app(app)
+    guid = fetch_guid(app)
+    if guid.eql?(-1)
+      return_false("App does not exist")
+    end
+  end
+  guid
+end
+
+def parse_instance_result(app)
+  @instances_information = {}
+  @app_state.each do |k, v|
+    parse_json_app_stats(k, v, app)
+  end
+end
+
+def parse_json_app_stats(instance, data, app)
+  state = data["state"]
+  memory_max = convert_byte_to_megabyte(data["stats"]["mem_quota"].to_i)
+  memory = convert_byte_to_megabyte(data["stats"]["usage"]["mem"].to_i)
+  cpu = (data["stats"]["usage"]["cpu"].to_f).floor
+  disk = convert_byte_to_megabyte(data["stats"]["usage"]["disk"].to_i)
+  disk_max = convert_byte_to_megabyte(data["stats"]["disk_quota"].to_i)
+
+  @instances_information.merge!({ instance => { :name => app, :state => state,
+    :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk,
+    :disk_max => disk_max } })
+end
+
+def convert_byte_to_megabyte(byte)
+  byte / 1024 / 1024
+end
+
+def fetch_guid(app)
+  guid = -1
+  result = JSON.parse(get_apps)
+  result["resources"].each do |item|
+    if item["entity"]["name"].eql?(app)
+      guid = item["metadata"]["guid"]
+      store_guid app, guid
+    end
+  end
+  guid
+end
+
+def init_app(app_name)
+  login
+  choose_space_and_org
 end
 
 def run
   parse_input
   validate_environment
   target
-  login
-  choose_space_and_org
   @options[:app].each do |app|
     check_app(app)
     init_attributes
