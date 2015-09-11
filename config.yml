@@ -6,11 +6,11 @@ output_channels:
   - :STDOUT
 thresholds:
   cpu:
-    min: 10
-    max: 1
+    warning: 10
+    critical: 1
   memory:
-    min: 200
-    max: 500
+    warning: 100
+    critical: 500
   disk:
-    min: 100
-    max: 500
+    warning: 100
+    critical: 500
