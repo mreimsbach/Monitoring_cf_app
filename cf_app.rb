@@ -2,33 +2,13 @@
 
 #########################
 # Monitoring cf app output
-# INPUT: ARGV[0] = user, ARGV[1] = pass, ARGV[2] = org, ARGV[3] = space, ARGV[4] = app
+# INPUT: cf_app.rb -u <USER> -p <PASS> -o <ORG> -s <SPACE> -a <APP>
 # OUTPUT: CPU Usage, Mem Usage, Instance Count, Errors
 #########################
 require 'optparse'
 require 'yaml'
 require "yaml/store"
 require 'json'
-
-#TODO:
-# + Aufräumen
-# Versschiedene Output zulassen
-## Nagios output
-### /=5165MB;42827;45206;0;47586 /data=607675MB;598043;631268;0;664493 /boot=26MB;401;423;0;446
-###https://nagios-plugins.org/doc/guidelines.html#AEN200
-## + Elk output ( elasticsearch, Logstash, Kibana )
-### + Sollte als Json automatisch gehen, prüfen: erwartet JSON
-# Performance prüfen, verbessern ( vlt. durch cache file )
-## CF_TRACE=true cf app blabla
-### Sowas wie try if not present relogin, try again
-# + Mehrere apps in dem gleichen space erlauben
-# + send_to_log ist aktuell output channel sollte, mehre optionen zulassen
-## +  send_to_tcp umbennen
-## + send_to_stdout
-## + Eventuell mit config datei
-#  + Sollte threasholds beherschen
-# + git repo für anlegen, nicht so faul wie der admin sein!
-# + Mit paramsparser arbeiten --organization anynines --space nagios --app teste1
 
 API="api.de.a9s.eu"
 BAD_STATES=["error"]
