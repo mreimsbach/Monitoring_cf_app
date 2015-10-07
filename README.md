@@ -2,6 +2,12 @@
 ##How to use
 `ruby cf_app.rb -u my-username -p my-password -o my-orgnization -s my-space -a my-app1,my-app2,...`
 ##Configure config.yml
+###Define host
+`host: localhost`
+###Define Port
+`port: 5000`
+###Display Warnings
+`send_warnings: true`
 ###Use JSON format
 `format: :JSON`
 ###Use Nagios format
