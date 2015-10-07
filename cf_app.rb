@@ -200,7 +200,7 @@ end
 def format_to_nagios
   @output= ""
   @instances_information.each do |k, v|
-    @output+= "APP #{v[:name]} CPU Usage #{v[:cpu]}% "+
+    @output+= "APP #{v[:name]} CPU USAGE #{v[:cpu]}% "+
     "MEM USAGE #{v[:memory]}MB DISK USAGE #{v[:disk]}MB|"+
     "CPU=#{v[:cpu]}%;#{@thresholds['cpu']['warning']};"+
     "#{@thresholds['cpu']['critical']} MEM=#{v[:memory]}MB;"+
