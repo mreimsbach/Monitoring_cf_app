@@ -179,7 +179,7 @@ def calc(current, max, unit, type, warning, critical)
 end
 
 def disk_allocation(index,info, warning, critical)
-  calc(info[:disk], info[:disk_max],"MB", "DISK", warning, critical)
+  calc(info[:disk], info[:disk_max],"MB", "DISK", warning, critical).to_json
 end
 
 def state_check(index,info)
