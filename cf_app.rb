@@ -304,7 +304,7 @@ def parse_json_app_stats(instance, data, app)
   disk = convert_byte_to_megabyte(data["stats"]["usage"]["disk"].to_i)
   disk_max = convert_byte_to_megabyte(data["stats"]["disk_quota"].to_i)
 
-  @instances_information.merge!({ instance => { :name => app, :state => state,
+  @instances_information.merge!({ "Application" => { :instance => instance, :name => app, :state => state,
     :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk,
     :disk_max => disk_max } })
 end
