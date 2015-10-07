@@ -47,6 +47,8 @@ end
 
 def load_config
   config = YAML::load_file(CONFIG_FILE_NAME)
+  @host = config["host"]
+  @port = config["port"]
   @format = config["format"]
   @skip_ssl_verification = config["skip_ssl_verification"]
   @commands = config["commands"]
@@ -211,7 +213,7 @@ end
 def send_to_tcp(msg)
   begin
     require 'socket'
-    s = TCPSocket.open 'localhost', 5000
+    s = TCPSocket.open @host, @port
     s.print(msg)
     s.close
   rescue

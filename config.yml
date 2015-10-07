@@ -1,5 +1,7 @@
 format: :JSON
 skip_ssl_verification: false
+host: localhost
+port: 5000
 commands:
   - cf
 output_channels:
