@@ -50,6 +50,7 @@ def load_config
   @host = config["host"]
   @port = config["port"]
   @format = config["format"]
+  @send_warnings = config["send_warnings"]
   @skip_ssl_verification = config["skip_ssl_verification"]
   @commands = config["commands"]
   @output_channels = config["output_channels"]
@@ -260,7 +261,9 @@ def check_app(app_name)
   init_app_state(guid, app_name)
   parse_instance_result(app_name)
   validate_instances
-  send_to_output(@output)
+  if @send_warnings
+    send_to_output(@output)
+  end
   format_output
   send_to_output(@output)
 end
