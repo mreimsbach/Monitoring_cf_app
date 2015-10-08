@@ -146,22 +146,22 @@ def get_apps
 end
 
 def validate_instances
-  @instances_information.each do |index, info|
-    state_check(index,info)
-    cpu_allocation(index,info,(@thresholds["cpu"]["warning"]).to_i,
+  @instances_information.each do |info|
+    state_check(info)
+    cpu_allocation(info,(@thresholds["cpu"]["warning"]).to_i,
                   (@thresholds["cpu"]["critical"]).to_i)
-    memory_allocation(index,info, (@thresholds["memory"]["warning"]).to_i,
+    memory_allocation(info, (@thresholds["memory"]["warning"]).to_i,
                   (@thresholds["memory"]["critical"]).to_i)
-    disk_allocation(index,info, (@thresholds["disk"]["warning"]).to_i,
+    disk_allocation(info, (@thresholds["disk"]["warning"]).to_i,
                   (@thresholds["disk"]["critical"]).to_i )
   end
 end
 
-def memory_allocation(index,info, warning, critical)
+def memory_allocation(info, warning, critical)
   calc(info[:memory], info[:memory_max],"MB", "MEM", warning, critical)
 end
 
-def cpu_allocation(index,info, warning, critical)
+def cpu_allocation(info, warning, critical)
   calc(info[:cpu], 100, "%", "CPU", warning, critical)
 end
 
@@ -179,13 +179,13 @@ def calc(current, max, unit, type, warning, critical)
   end
 end
 
-def disk_allocation(index,info, warning, critical)
+def disk_allocation(info, warning, critical)
   calc(info[:disk], info[:disk_max],"MB", "DISK", warning, critical).to_json
 end
 
-def state_check(index,info)
+def state_check(info)
   if BAD_STATES.include?(info[:state])
-    return_false "Instance: #{index} in bad state (#{info[:state]}) "
+    return_false "Instance: #{info[:instance]} in bad state (#{info[:state]}) "
   end
 end
 
@@ -290,7 +290,7 @@ def update_guid(app)
 end
 
 def parse_instance_result(app)
-  @instances_information = {}
+  @instances_information = []
   @app_state.each do |k, v|
     parse_json_app_stats(k, v, app)
   end
@@ -304,9 +304,9 @@ def parse_json_app_stats(instance, data, app)
   disk = convert_byte_to_megabyte(data["stats"]["usage"]["disk"].to_i)
   disk_max = convert_byte_to_megabyte(data["stats"]["disk_quota"].to_i)
 
-  @instances_information.merge!({ "Application" => { :instance => instance, :name => app, :state => state,
+  @instances_information.push({ :instance => instance, :name => app, :state => state,
     :cpu => cpu, :memory => memory, :memory_max => memory_max, :disk => disk,
-    :disk_max => disk_max } })
+    :disk_max => disk_max })
 end
 
 def convert_byte_to_megabyte(byte)
