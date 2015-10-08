@@ -189,26 +189,24 @@ def state_check(info)
   end
 end
 
-def format_output
+def format_output(instance)
   case @format
   when /\AJSON\Z/
-    @output = @instances_information.to_json
+    @output = instance.to_json
   when /\ANAGIOS\Z/
-    format_to_nagios
+    format_to_nagios(instance)
   end
 end
 
-def format_to_nagios
+def format_to_nagios(info)
   @output= ""
-  @instances_information.each do |k, v|
-    @output+= "APP #{v[:name]} CPU USAGE #{v[:cpu]}% "+
-    "MEM USAGE #{v[:memory]}MB DISK USAGE #{v[:disk]}MB|"+
-    "CPU=#{v[:cpu]}%;#{@thresholds['cpu']['warning']};"+
-    "#{@thresholds['cpu']['critical']} MEM=#{v[:memory]}MB;"+
-    "#{@thresholds['memory']['warning']};#{@thresholds['memory']['critical']}"+
-    ";;#{v[:memory_max]} DISK=#{v[:disk]}MB;#{@thresholds['disk']['warning']};"+
-    "#{@thresholds['disk']['critical']};;#{v[:disk_max]}"
-  end
+  @output+= "APP #{info[:name]} INSTANCE #{info[:instance]} CPU USAGE #{info[:cpu]}% "+
+  "MEM USAGE #{info[:memory]}MB DISK USAGE #{info[:disk]}MB|"+
+  "CPU=#{info[:cpu]}%;#{@thresholds['cpu']['warning']};"+
+  "#{@thresholds['cpu']['critical']} MEM=#{info[:memory]}MB;"+
+  "#{@thresholds['memory']['warning']};#{@thresholds['memory']['critical']}"+
+  ";;#{info[:memory_max]} DISK=#{info[:disk]}MB;#{@thresholds['disk']['warning']};"+
+  "#{@thresholds['disk']['critical']};;#{info[:disk_max]}"
 end
 
 def send_to_tcp(msg)
@@ -264,8 +262,10 @@ def check_app(app_name)
   if @send_warnings
     send_to_output(@output)
   end
-  format_output
-  send_to_output(@output)
+  @instances_information.each do |instance|
+    format_output(instance)
+    send_to_output(@output)
+  end
 end
 
 def init_app_state(guid, app_name)
