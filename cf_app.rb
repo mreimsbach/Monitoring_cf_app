@@ -192,7 +192,7 @@ end
 def format_output
   case @format
   when /\AJSON\Z/
-    @output = @instances_information
+    @output = @instances_information.to_json
   when /\ANAGIOS\Z/
     format_to_nagios
   end
